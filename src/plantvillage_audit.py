@@ -170,14 +170,21 @@ def audit_metadata(metadata: pd.DataFrame) -> dict[str, pd.DataFrame]:
     _validate_columns(metadata)
 
     total_images = int(len(metadata))
-    from_leaf_map = _source_series(metadata["leaf_id_source"]).eq("leaf-map")
-    using_fallback = _source_series(metadata["leaf_id_source"]).eq("fallback")
+    source = _source_series(metadata["leaf_id_source"])
+    from_leaf_map = source.eq("leaf-map")
+    using_fallback = source.eq("fallback")
     leaf_map_count = int(from_leaf_map.sum())
     fallback_count = int(using_fallback.sum())
     fallback_percent = round((fallback_count / total_images) * 100, 4) if total_images else 0.0
 
+    fallback_metadata = metadata.loc[using_fallback].copy()
     group_counts = metadata.groupby("leaf_id").size()
     groups_with_multiple_images = group_counts[group_counts > 1]
+    fallback_group_summary = _leaf_id_group_summary(fallback_metadata)
+    fallbacks_with_multiple_images = fallback_group_summary.loc[
+        fallback_group_summary["quantidade_imagens"] > 1
+    ]
+    fallbacks_multiclass = _fallbacks_multiclass_table(fallback_metadata)
 
     diseases = metadata.loc[
         ~metadata["doenca"].astype("string").str.lower().eq("healthy").fillna(False),
@@ -201,6 +208,9 @@ def audit_metadata(metadata: pd.DataFrame) -> dict[str, pd.DataFrame]:
                     groups_with_multiple_images.sum()
                 ),
                 "grupos_com_multiplas_imagens": int(len(groups_with_multiple_images)),
+                "fallbacks_unicos": int(fallback_metadata["leaf_id"].nunique(dropna=True)),
+                "fallbacks_com_mais_de_uma_imagem": int(len(fallbacks_with_multiple_images)),
+                "fallbacks_em_mais_de_uma_classe": int(len(fallbacks_multiclass)),
             }
         ]
     )
@@ -234,6 +244,11 @@ def audit_metadata(metadata: pd.DataFrame) -> dict[str, pd.DataFrame]:
         "imagens_por_classe": class_counts,
         "origem_leaf_id": leaf_source_counts,
         "status_leaf_id": leaf_status_counts,
+        "maiores_grupos_leaf_id": _leaf_id_group_summary(metadata).head(20),
+        "maiores_grupos_fallback": fallback_group_summary.head(20),
+        "fallback_r_imagens": _leaf_id_detail(metadata, "fallback_r"),
+        "fallback_r_imagens_por_classe": _leaf_id_class_counts(metadata, "fallback_r"),
+        "fallbacks_multiclasse": fallbacks_multiclass,
     }
 
 
@@ -299,6 +314,94 @@ def _validate_columns(metadata: pd.DataFrame) -> None:
 def _source_series(series: pd.Series) -> pd.Series:
     normalized = series.astype("string").str.strip().str.lower()
     return normalized.fillna("")
+
+
+def _leaf_id_group_summary(metadata: pd.DataFrame) -> pd.DataFrame:
+    columns = ["leaf_id", "quantidade_imagens", "quantidade_classes", "leaf_id_source"]
+    if metadata.empty:
+        return pd.DataFrame(columns=columns)
+
+    return (
+        metadata.groupby("leaf_id", dropna=False)
+        .agg(
+            quantidade_imagens=("leaf_id", "size"),
+            quantidade_classes=("classe", "nunique"),
+            leaf_id_source=("leaf_id_source", _join_unique),
+        )
+        .reset_index()
+        .sort_values(["quantidade_imagens", "leaf_id"], ascending=[False, True])
+        .reset_index(drop=True)
+    )
+
+
+def _leaf_id_detail(metadata: pd.DataFrame, leaf_id: str) -> pd.DataFrame:
+    columns = [
+        "filename",
+        "classe",
+        "leaf_lookup_key",
+        "leaf_id",
+        "quantidade_classes_no_grupo",
+        "quantidade_imagens_na_classe",
+    ]
+    rows = metadata.loc[
+        metadata["leaf_id"].eq(leaf_id),
+        ["filename", "classe", "leaf_lookup_key", "leaf_id"],
+    ].copy()
+    if rows.empty:
+        return pd.DataFrame(columns=columns)
+
+    class_counts = (
+        rows["classe"]
+        .value_counts()
+        .rename_axis("classe")
+        .reset_index(name="quantidade_imagens_na_classe")
+    )
+    rows = rows.merge(class_counts, on="classe", how="left")
+    rows["quantidade_classes_no_grupo"] = int(rows["classe"].nunique())
+    return rows[columns].sort_values(["classe", "filename"]).reset_index(drop=True)
+
+
+def _leaf_id_class_counts(metadata: pd.DataFrame, leaf_id: str) -> pd.DataFrame:
+    rows = metadata.loc[metadata["leaf_id"].eq(leaf_id)]
+    if rows.empty:
+        return pd.DataFrame(columns=["classe", "quantidade"])
+
+    return (
+        rows["classe"]
+        .value_counts()
+        .rename_axis("classe")
+        .reset_index(name="quantidade")
+        .sort_values(["quantidade", "classe"], ascending=[False, True])
+        .reset_index(drop=True)
+    )
+
+
+def _fallbacks_multiclass_table(fallback_metadata: pd.DataFrame) -> pd.DataFrame:
+    columns = ["leaf_id", "quantidade_imagens", "quantidade_classes", "classes"]
+    if fallback_metadata.empty:
+        return pd.DataFrame(columns=columns)
+
+    group_summary = _leaf_id_group_summary(fallback_metadata)
+    result = group_summary.loc[group_summary["quantidade_classes"] > 1].copy()
+    if result.empty:
+        return pd.DataFrame(columns=columns)
+
+    classes = (
+        fallback_metadata.groupby("leaf_id", dropna=False)["classe"]
+        .apply(_join_unique)
+        .rename("classes")
+        .reset_index()
+    )
+    return (
+        result[["leaf_id", "quantidade_imagens", "quantidade_classes"]]
+        .merge(classes, on="leaf_id", how="left")
+        .sort_values(["quantidade_imagens", "leaf_id"], ascending=[False, True])
+        .reset_index(drop=True)
+    )
+
+
+def _join_unique(values: pd.Series) -> str:
+    return ", ".join(sorted({str(value) for value in values.dropna()}))
 
 
 __all__ = [
