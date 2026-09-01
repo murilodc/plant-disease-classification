@@ -33,19 +33,20 @@ METADATA_COLUMNS = [
 
 def normalize_image_identifier(filename: str) -> str:
     """Normalize an image filename using the PlantVillage loader logic."""
-    image_identifier = PurePosixPath(str(filename).replace("\\", "/")).name
-    image_identifier = image_identifier.replace("_final_masked", "")
+    image_identifier = str(filename).replace("_final_masked", "")
 
     if "___" in image_identifier:
         image_identifier = image_identifier.split("___")[-1]
 
     image_identifier = image_identifier.split("copy")[0]
-
-    suffix = PurePosixPath(image_identifier).suffix
-    if suffix:
-        image_identifier = image_identifier[: -len(suffix)]
-
-    return image_identifier.strip().lower()
+    image_identifier = (
+        image_identifier.replace(".jpg", "")
+        .replace(".JPG", "")
+        .replace(".png", "")
+        .replace(".PNG", "")
+    )
+    image_identifier = image_identifier.strip()
+    return image_identifier.lower()
 
 
 def load_leaf_map(leaf_map_path: str | Path) -> dict[str, list[str]]:
