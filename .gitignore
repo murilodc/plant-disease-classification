@@ -5,5 +5,8 @@ __pycache__/
 
 data/
 results/
+*.zip
+leaf-map.json
+leaf_grouping/
 
 .env
