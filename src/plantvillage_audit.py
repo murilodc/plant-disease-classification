@@ -14,7 +14,7 @@ import pandas as pd
 DEFAULT_IMAGE_EXTENSIONS = frozenset(
     {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
 )
-MISSING_LEAF_ID = "LEAF_ID_NOT_FOUND"
+FALLBACK_PREFIX = "fallback_"
 
 METADATA_COLUMNS = [
     "zip_path",
@@ -24,6 +24,7 @@ METADATA_COLUMNS = [
     "doenca",
     "leaf_id",
     "leaf_id_found",
+    "leaf_id_source",
     "leaf_match_status",
     "leaf_lookup_key",
     "leaf_suggestions_count",
@@ -68,20 +69,18 @@ def resolve_leaf_id(
     filename: str,
     classe: str,
     leaf_map: Mapping[str, Sequence[str]],
-    missing_leaf_id: str = MISSING_LEAF_ID,
+    fallback_prefix: str = FALLBACK_PREFIX,
 ) -> dict[str, Any]:
-    """Find the PlantVillage leaf_id for one image.
-
-    Missing or ambiguous matches are explicit; they are not converted into
-    fallback identifiers.
-    """
+    """Find the PlantVillage grouping identifier for one image."""
     lookup_key = normalize_image_identifier(filename)
+    fallback_leaf_id = f"{fallback_prefix}{lookup_key}"
     suggestions = leaf_map.get(lookup_key)
 
     if suggestions is None:
         return {
-            "leaf_id": missing_leaf_id,
+            "leaf_id": fallback_leaf_id,
             "leaf_id_found": False,
+            "leaf_id_source": "fallback",
             "leaf_match_status": "not_found",
             "leaf_lookup_key": lookup_key,
             "leaf_suggestions_count": 0,
@@ -92,6 +91,7 @@ def resolve_leaf_id(
         return {
             "leaf_id": suggestions[0],
             "leaf_id_found": True,
+            "leaf_id_source": "leaf-map",
             "leaf_match_status": "matched_unique",
             "leaf_lookup_key": lookup_key,
             "leaf_suggestions_count": 1,
@@ -103,22 +103,25 @@ def resolve_leaf_id(
                 return {
                     "leaf_id": suggestion,
                     "leaf_id_found": True,
+                    "leaf_id_source": "leaf-map",
                     "leaf_match_status": "matched_by_class",
                     "leaf_lookup_key": lookup_key,
                     "leaf_suggestions_count": len(suggestions),
                 }
 
         return {
-            "leaf_id": missing_leaf_id,
+            "leaf_id": fallback_leaf_id,
             "leaf_id_found": False,
+            "leaf_id_source": "fallback",
             "leaf_match_status": "ambiguous_no_class_match",
             "leaf_lookup_key": lookup_key,
             "leaf_suggestions_count": len(suggestions),
         }
 
     return {
-        "leaf_id": missing_leaf_id,
+        "leaf_id": fallback_leaf_id,
         "leaf_id_found": False,
+        "leaf_id_source": "fallback",
         "leaf_match_status": "empty_suggestions",
         "leaf_lookup_key": lookup_key,
         "leaf_suggestions_count": 0,
@@ -167,14 +170,14 @@ def audit_metadata(metadata: pd.DataFrame) -> dict[str, pd.DataFrame]:
     _validate_columns(metadata)
 
     total_images = int(len(metadata))
-    leaf_found = _as_bool_series(metadata["leaf_id_found"])
-    missing_leaf_count = int((~leaf_found).sum())
-    missing_leaf_percent = (
-        round((missing_leaf_count / total_images) * 100, 4) if total_images else 0.0
-    )
+    from_leaf_map = _source_series(metadata["leaf_id_source"]).eq("leaf-map")
+    using_fallback = _source_series(metadata["leaf_id_source"]).eq("fallback")
+    leaf_map_count = int(from_leaf_map.sum())
+    fallback_count = int(using_fallback.sum())
+    fallback_percent = round((fallback_count / total_images) * 100, 4) if total_images else 0.0
 
-    leaf_counts = metadata.loc[leaf_found].groupby("leaf_id").size()
-    leaves_with_multiple_images = leaf_counts[leaf_counts > 1]
+    group_counts = metadata.groupby("leaf_id").size()
+    groups_with_multiple_images = group_counts[group_counts > 1]
 
     diseases = metadata.loc[
         ~metadata["doenca"].astype("string").str.lower().eq("healthy").fillna(False),
@@ -188,13 +191,16 @@ def audit_metadata(metadata: pd.DataFrame) -> dict[str, pd.DataFrame]:
                 "numero_classes": int(metadata["classe"].nunique(dropna=True)),
                 "numero_culturas": int(metadata["cultura"].nunique(dropna=True)),
                 "numero_doencas": int(len(diseases)),
-                "numero_leaf_id_unicos": int(metadata.loc[leaf_found, "leaf_id"].nunique()),
-                "imagens_sem_leaf_id": missing_leaf_count,
-                "percentual_sem_leaf_id": missing_leaf_percent,
-                "imagens_em_folhas_com_multiplas_imagens": int(
-                    leaves_with_multiple_images.sum()
+                "imagens_associadas_leaf_map": leaf_map_count,
+                "imagens_usando_fallback": fallback_count,
+                "percentual_usando_fallback": fallback_percent,
+                "numero_identificadores_agrupamento_unicos": int(
+                    metadata["leaf_id"].nunique(dropna=True)
                 ),
-                "folhas_com_multiplas_imagens": int(len(leaves_with_multiple_images)),
+                "imagens_em_grupos_com_multiplas_imagens": int(
+                    groups_with_multiple_images.sum()
+                ),
+                "grupos_com_multiplas_imagens": int(len(groups_with_multiple_images)),
             }
         ]
     )
@@ -215,9 +221,18 @@ def audit_metadata(metadata: pd.DataFrame) -> dict[str, pd.DataFrame]:
         .reset_index(name="quantidade")
     )
 
+    leaf_source_counts = (
+        metadata["leaf_id_source"]
+        .value_counts(dropna=False)
+        .sort_index()
+        .rename_axis("leaf_id_source")
+        .reset_index(name="quantidade")
+    )
+
     return {
         "resumo": summary,
         "imagens_por_classe": class_counts,
+        "origem_leaf_id": leaf_source_counts,
         "status_leaf_id": leaf_status_counts,
     }
 
@@ -281,18 +296,15 @@ def _validate_columns(metadata: pd.DataFrame) -> None:
         raise ValueError(f"Missing required metadata columns: {joined_columns}")
 
 
-def _as_bool_series(series: pd.Series) -> pd.Series:
-    if pd.api.types.is_bool_dtype(series):
-        return series.fillna(False).astype(bool)
-
+def _source_series(series: pd.Series) -> pd.Series:
     normalized = series.astype("string").str.strip().str.lower()
-    return normalized.isin({"1", "true", "yes", "sim"}).fillna(False)
+    return normalized.fillna("")
 
 
 __all__ = [
     "DEFAULT_IMAGE_EXTENSIONS",
     "METADATA_COLUMNS",
-    "MISSING_LEAF_ID",
+    "FALLBACK_PREFIX",
     "audit_metadata",
     "build_metadata_dataframe",
     "load_leaf_map",
