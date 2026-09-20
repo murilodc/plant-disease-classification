@@ -6,6 +6,7 @@ import random
 import shutil
 import zipfile
 from pathlib import Path, PurePosixPath
+from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -138,11 +139,19 @@ def create_dataloaders(
     num_workers: int = 2,
     seed: int = 42,
     pin_memory: bool | None = None,
+    transform_factory: Callable[[str], transforms.Compose] | None = None,
 ) -> dict[str, DataLoader]:
-    """Create train, validation and test DataLoaders from metadata splits."""
+    """Create train, validation and test DataLoaders from metadata splits.
+
+    ``transform_factory`` makes model-specific preprocessing explicit while the
+    default preserves the exact transform pipeline used by the baseline CNN.
+    """
     metadata = load_metadata(metadata_csv)
     class_to_idx = build_class_to_idx(metadata)
     pin_memory = torch.cuda.is_available() if pin_memory is None else pin_memory
+    transform_factory = (
+        build_image_transforms if transform_factory is None else transform_factory
+    )
 
     generator = torch.Generator()
     generator.manual_seed(seed)
@@ -154,6 +163,7 @@ def create_dataloaders(
             image_root=image_root,
             split=split,
             class_to_idx=class_to_idx,
+            transform=transform_factory(split),
         )
         dataloaders[split] = DataLoader(
             dataset,
