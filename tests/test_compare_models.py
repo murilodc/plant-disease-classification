@@ -198,6 +198,7 @@ class ComparisonTests(unittest.TestCase):
         notebook = json.loads(path.read_text(encoding="utf-8"))
         namespace = {
             "RESULTS_DIR": self.root,
+            "SRC_DIR": Path(__file__).resolve().parents[1] / "src",
             "COMPARISON_DIR": Path(self.temporary.name) / "notebook_comparison",
             "display": lambda value: None,
             "Image": lambda **kwargs: None,
@@ -214,6 +215,24 @@ class ComparisonTests(unittest.TestCase):
         self.assertEqual(len(namespace["comparison_plot_paths"]), 6)
         self.assertEqual(len(namespace["curve_plot_paths"]), 2)
         self.assertTrue(all(p.is_file() for p in namespace["generated_paths"]))
+
+    def test_notebook_rejects_outdated_comparator_without_using_cached_module(self):
+        path = Path(__file__).resolve().parents[1] / "notebooks/06_compare_validation_results.ipynb"
+        notebook = json.loads(path.read_text(encoding="utf-8"))
+        cell = next(c for c in notebook["cells"] if c["id"] == "imports")
+        stale_src = Path(self.temporary.name) / "stale_src"
+        stale_src.mkdir()
+        (stale_src / "compare_models.py").write_text("# Old comparator\n", encoding="utf-8")
+        previous = sys.modules.get("compare_models")
+        try:
+            with redirect_stdout(io.StringIO()), self.assertRaisesRegex(
+                RuntimeError, "desatualizado"
+            ):
+                exec("".join(cell["source"]), {
+                    "SRC_DIR": stale_src, "PROJECT_ROOT": Path(self.temporary.name),
+                })
+        finally:
+            sys.modules["compare_models"] = previous
 
 
 if __name__ == "__main__":

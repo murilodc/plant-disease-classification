@@ -17,6 +17,8 @@ EXPECTED_TRAIN_SAMPLES = 38_008
 EXPECTED_VALIDATION_SAMPLES = 8_172
 EXPECTED_NUM_CLASSES = 38
 EXPECTED_INPUT_SIZE = [3, 224, 224]
+# Lets notebook clients detect an outdated copy in a persistent Colab project.
+BATCH_SIZE_POLICY = "recorded_positive_integer"
 
 
 @dataclass(frozen=True)
