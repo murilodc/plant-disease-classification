@@ -629,7 +629,6 @@ def _validate_metadata(
     metadata: dict[str, Any],
 ) -> tuple[list[str], list[str]]:
     expected = {
-        "batch_size": 32,
         "max_epochs": 30,
         "early_stopping_patience": 5,
         "min_delta": 1e-4,
@@ -641,6 +640,15 @@ def _validate_metadata(
     }
     warnings: list[str] = []
     errors: list[str] = []
+    # Batch size is an execution choice, not a shared protocol constant. Require
+    # a recorded positive integer so unknown/malformed values cannot pass as valid.
+    try:
+        _required_integer(
+            metadata, "batch_size", Path("experiment_metadata.json"), minimum=1
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        errors.append(f"{model_name}: metadata batch_size inválido: {exc}")
+
     for field, expected_value in expected.items():
         if field not in metadata:
             warnings.append(
@@ -980,6 +988,32 @@ def _validate_hardware_consistency(
         warnings.append(
             "num_workers diferente entre modelos pode afetar a comparação de tempos: "
             + "; ".join(f"{model}={value}" for model, value in workers.items())
+        )
+
+    batches = {
+        model: metadata["batch_size"]
+        for model, metadata in metadata_by_model.items()
+    }
+    if len(set(batches.values())) > 1:
+        warnings.append(
+            "batch_size diferente entre modelos afeta a comparabilidade das métricas "
+            "e, principalmente, dos tempos de treinamento (número de passos por época); "
+            "também pode afetar latência e throughput de inferência. "
+            "Os tempos medidos não isolam o efeito da arquitetura: "
+            + "; ".join(f"{model}={value}" for model, value in batches.items())
+        )
+
+    environment = {
+        model: (metadata.get("pytorch_version"), metadata.get("pytorch_cuda_version"))
+        for model, metadata in metadata_by_model.items()
+    }
+    if len(set(environment.values())) > 1:
+        warnings.append(
+            "Ambiente PyTorch/CUDA diferente entre modelos afeta a comparabilidade, "
+            "principalmente dos tempos de treinamento, além da inferência e da "
+            "reprodutibilidade numérica. Os tempos medidos não isolam o efeito da "
+            "arquitetura. Valores (pytorch_version, pytorch_cuda_version): "
+            + "; ".join(f"{model}={value}" for model, value in environment.items())
         )
     return warnings
 
