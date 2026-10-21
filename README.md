@@ -117,3 +117,22 @@ instalado e as bibliotecas existentes, sem modificar a `.venv`:
 ```powershell
 py -3.14 -c "import sys; sys.path.insert(0, r'.venv/Lib/site-packages'); import unittest; result=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.discover('tests')); sys.exit(not result.wasSuccessful())"
 ```
+
+### Colab: `No module named run_repetition`
+
+`run_repetition` é `src/run_repetition.py`, não um pacote do pip. Abrir o
+notebook pelo GitHub não atualiza a cópia dos scripts no Drive. Confira o
+`PROJECT_ROOT` impresso na célula de caminhos. Em um clone Git, atualize essa
+pasta antes de reexecutar as células de caminhos, seleção e preparação:
+
+```python
+import subprocess
+subprocess.run(['git', '-C', str(PROJECT_ROOT), 'pull', '--ff-only'], check=True)
+print(PROJECT_ROOT / 'src/run_repetition.py')
+assert (PROJECT_ROOT / 'src/run_repetition.py').is_file()
+```
+
+Se a pasta não for um clone, copie a pasta `src/` atualizada do repositório
+para `PROJECT_ROOT/src/`. Preserve o CSV, dados e resultados existentes. Se o
+Git bloquear o pull por alterações locais, preserve essas alterações antes de
+sincronizar; não use reset ou limpeza forçada. A atualização não inicia treino.

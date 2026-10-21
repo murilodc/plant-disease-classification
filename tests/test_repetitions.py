@@ -181,12 +181,21 @@ class RepetitionTests(unittest.TestCase):
                     exec(cell.source, namespace)
         self.assertFalse(namespace['EXECUTE_TRAINING'])
         self.assertEqual(namespace['SEED'], 123)
+        (self.project / 'src/run_repetition.py').write_text('# synthetic preflight marker')
         namespace.update(PROJECT_ROOT=self.project, IMAGE_ROOT=self.images,
                          display=lambda value: None)
         with patch('run_repetition.subprocess.run', side_effect=AssertionError('training forbidden')):
             for cell in notebook.cells:
                 if cell.id in ('preflight', 'train', 'compare'):
                     exec(cell.source, namespace)
+
+    def test_notebook_reports_missing_source_before_import(self):
+        path = Path(__file__).resolve().parents[1] / 'notebooks/07_repeticoes_individuais.ipynb'
+        notebook = json.loads(path.read_text(encoding='utf-8'))
+        cell = next(c for c in notebook['cells'] if c['id'] == 'preflight')
+        with patch('run_repetition.subprocess.run', side_effect=AssertionError('training forbidden')):
+            with self.assertRaisesRegex(FileNotFoundError, 'sincroniza os scripts'):
+                exec(''.join(cell['source']), {'PROJECT_ROOT': self.project})
 
     def test_runner_checks_hardware_and_records_mocked_launch(self):
         import torch
