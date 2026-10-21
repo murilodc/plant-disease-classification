@@ -18,7 +18,7 @@ EXPECTED_VALIDATION_SAMPLES = 8_172
 EXPECTED_NUM_CLASSES = 38
 EXPECTED_INPUT_SIZE = [3, 224, 224]
 # Lets notebook clients detect an outdated copy in a persistent Colab project.
-BATCH_SIZE_POLICY = "recorded_positive_integer"
+BATCH_SIZE_POLICY = "fixed_32"
 
 
 @dataclass(frozen=True)
@@ -642,12 +642,15 @@ def _validate_metadata(
     }
     warnings: list[str] = []
     errors: list[str] = []
-    # Batch size is an execution choice, not a shared protocol constant. Require
-    # a recorded positive integer so unknown/malformed values cannot pass as valid.
+    # The comparison protocol requires the same recorded batch size for all models.
     try:
-        _required_integer(
+        batch_size = _required_integer(
             metadata, "batch_size", Path("experiment_metadata.json"), minimum=1
         )
+        if batch_size != 32:
+            errors.append(
+                f"{model_name}: metadata batch_size={batch_size!r}, esperado=32."
+            )
     except (KeyError, TypeError, ValueError) as exc:
         errors.append(f"{model_name}: metadata batch_size inválido: {exc}")
 
@@ -990,19 +993,6 @@ def _validate_hardware_consistency(
         warnings.append(
             "num_workers diferente entre modelos pode afetar a comparação de tempos: "
             + "; ".join(f"{model}={value}" for model, value in workers.items())
-        )
-
-    batches = {
-        model: metadata["batch_size"]
-        for model, metadata in metadata_by_model.items()
-    }
-    if len(set(batches.values())) > 1:
-        warnings.append(
-            "batch_size diferente entre modelos afeta a comparabilidade das métricas "
-            "e, principalmente, dos tempos de treinamento (número de passos por época); "
-            "também pode afetar latência e throughput de inferência. "
-            "Os tempos medidos não isolam o efeito da arquitetura: "
-            + "; ".join(f"{model}={value}" for model, value in batches.items())
         )
 
     environment = {

@@ -111,26 +111,25 @@ class ComparisonTests(unittest.TestCase):
         self.assertEqual(result.summary.status.tolist(), ["complete"] * 4)
         self.assertEqual(result.warnings, [])
 
-    def test_different_batch_preserves_all_original_values_and_files(self):
+    def test_batch_16_is_invalid_without_changing_recorded_values_or_files(self):
         original = self.compare()
         self.update_metadata(batch_size=16)
         before = {p: hashlib.sha256(p.read_bytes()).digest()
                   for p in self.root.rglob("*") if p.is_file()}
         output = Path(self.temporary.name) / "comparison"
         result = compare_validation_results(self.root, output_dir=output)
-        self.assertEqual(result.summary.status.tolist(), ["complete"] * 4)
+        self.assertEqual(result.summary.status.tolist(), ["complete", "complete", "invalid", "complete"])
         self.assertEqual(result.summary.batch_size.tolist(), [32, 32, 16, 32])
         pd.testing.assert_frame_equal(
-            result.summary.drop(columns="batch_size"),
-            original.summary.drop(columns="batch_size"),
+            result.summary.drop(columns=["batch_size", "status"]),
+            original.summary.drop(columns=["batch_size", "status"]),
         )
-        pd.testing.assert_frame_equal(result.per_class, original.per_class)
-        for name in original.histories:
+        self.assertNotIn(self.dense.key, result.per_class.model_key.tolist())
+        for name in result.histories:
             pd.testing.assert_frame_equal(result.histories[name], original.histories[name])
         warning = "\n".join(result.warnings)
-        self.assertIn("batch_size diferente", warning)
-        self.assertIn("DenseNet201=16", warning)
-        self.assertIn("tempos de treinamento", warning)
+        self.assertIn("batch_size=16, esperado=32", warning)
+        self.assertIn("DenseNet201", warning)
         self.assertIn(warning, result.warnings_path.read_text(encoding="utf-8"))
         self.assertEqual(before, {p: hashlib.sha256(p.read_bytes()).digest()
                                  for p in self.root.rglob("*") if p.is_file()})
@@ -148,11 +147,11 @@ class ComparisonTests(unittest.TestCase):
         self.write_json(self.dense, path.name, metadata)
         self.assertEqual(self.dense_status(self.compare()), "invalid")
 
-    def test_positive_batch_sizes_are_not_limited_to_16_and_32(self):
+    def test_positive_batch_sizes_other_than_32_are_invalid(self):
         for value in (1, 8, 64):
             with self.subTest(batch_size=value):
                 self.update_metadata(batch_size=value)
-                self.assertEqual(self.dense_status(self.compare()), "complete")
+                self.assertEqual(self.dense_status(self.compare()), "invalid")
 
     def test_each_environment_version_difference_warns_without_invalidating(self):
         for field in ("pytorch_version", "pytorch_cuda_version"):
@@ -165,7 +164,7 @@ class ComparisonTests(unittest.TestCase):
                 self.update_metadata(pytorch_version="synthetic-torch-a",
                                      pytorch_cuda_version="cuda-a")
 
-    def test_protocol_inconsistencies_remain_invalid_with_batch_16(self):
+    def test_protocol_inconsistencies_remain_invalid_with_batch_32(self):
         for field, value in (("seed", 43), ("validation_samples", 8000),
                              ("evaluation_split", "test"), ("test_split_used", True),
                              ("best_checkpoint_restored_before_validation", False),
@@ -173,12 +172,12 @@ class ComparisonTests(unittest.TestCase):
             with self.subTest(field=field):
                 path = self.root / self.dense.directory_name / "experiment_metadata.json"
                 original = path.read_bytes()
-                self.update_metadata(batch_size=16, **{field: value})
+                self.update_metadata(batch_size=32, **{field: value})
                 self.assertEqual(self.dense_status(self.compare()), "invalid")
                 path.write_bytes(original)
 
     def test_history_and_metrics_inconsistencies_remain_invalid(self):
-        self.update_metadata(batch_size=16)
+        self.update_metadata(batch_size=32)
         for name, column, value in (
             (self.dense.history_name, "epoch_time_seconds", 99),
             ("validation_metrics.csv", "f1_macro", 0.1),
@@ -193,7 +192,7 @@ class ComparisonTests(unittest.TestCase):
                 path.write_bytes(original)
 
     def test_notebook_comparison_cells_with_synthetic_results(self):
-        self.update_metadata(batch_size=16, pytorch_version="different")
+        self.update_metadata(batch_size=32, pytorch_version="different")
         path = Path(__file__).resolve().parents[1] / "notebooks/06_compare_validation_results.ipynb"
         notebook = json.loads(path.read_text(encoding="utf-8"))
         namespace = {
