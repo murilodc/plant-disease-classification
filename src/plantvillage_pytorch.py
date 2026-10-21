@@ -140,12 +140,15 @@ def create_dataloaders(
     seed: int = 42,
     pin_memory: bool | None = None,
     transform_factory: Callable[[str], transforms.Compose] | None = None,
+    splits: tuple[str, ...] = SPLITS,
 ) -> dict[str, DataLoader]:
     """Create train, validation and test DataLoaders from metadata splits.
 
     ``transform_factory`` makes model-specific preprocessing explicit while the
     default preserves the exact transform pipeline used by the baseline CNN.
     """
+    if not splits or len(set(splits)) != len(splits) or any(s not in SPLITS for s in splits):
+        raise ValueError("splits deve conter nomes válidos e únicos.")
     metadata = load_metadata(metadata_csv)
     class_to_idx = build_class_to_idx(metadata)
     pin_memory = torch.cuda.is_available() if pin_memory is None else pin_memory
@@ -157,7 +160,7 @@ def create_dataloaders(
     generator.manual_seed(seed)
 
     dataloaders = {}
-    for split in SPLITS:
+    for split in splits:
         dataset = PlantVillageDataset(
             metadata_csv=metadata,
             image_root=image_root,

@@ -150,6 +150,7 @@ def compare_validation_results(
     output_dir: str | Path | None = None,
     *,
     save: bool = True,
+    expected_seed: int = 42,
 ) -> ComparisonResult:
     """Load validation-only artifacts and build objective comparison tables.
 
@@ -172,6 +173,7 @@ def compare_validation_results(
         row, per_class, history, metadata, model_warnings = _load_model_artifacts(
             results_root,
             spec,
+            expected_seed=expected_seed,
         )
         rows.append(row)
         warnings.extend(model_warnings)
@@ -370,6 +372,7 @@ def save_training_curve_plots(
 def _load_model_artifacts(
     results_root: Path,
     spec: ModelSpec,
+    expected_seed: int = 42,
 ) -> tuple[
     dict[str, Any],
     pd.DataFrame | None,
@@ -556,6 +559,7 @@ def _load_model_artifacts(
             metadata_warnings, metadata_errors = _validate_metadata(
                 spec.display_name,
                 metadata,
+                expected_seed=expected_seed,
             )
             warnings.extend(metadata_warnings)
             parse_errors.extend(metadata_errors)
@@ -629,12 +633,13 @@ def _load_model_artifacts(
 def _validate_metadata(
     model_name: str,
     metadata: dict[str, Any],
+    expected_seed: int = 42,
 ) -> tuple[list[str], list[str]]:
     expected = {
         "max_epochs": 30,
         "early_stopping_patience": 5,
         "min_delta": 1e-4,
-        "seed": 42,
+        "seed": expected_seed,
         "input_image_size": EXPECTED_INPUT_SIZE,
         "num_classes": EXPECTED_NUM_CLASSES,
         "train_samples": EXPECTED_TRAIN_SAMPLES,
@@ -642,6 +647,12 @@ def _validate_metadata(
     }
     warnings: list[str] = []
     errors: list[str] = []
+    try:
+        recorded_seed = _required_integer(metadata, "seed", Path("experiment_metadata.json"), minimum=0)
+        if recorded_seed != expected_seed:
+            errors.append(f"{model_name}: seed registrada={recorded_seed}, esperada={expected_seed}.")
+    except (KeyError, TypeError, ValueError) as exc:
+        errors.append(f"{model_name}: seed inválida: {exc}")
     # The comparison protocol requires the same recorded batch size for all models.
     try:
         batch_size = _required_integer(

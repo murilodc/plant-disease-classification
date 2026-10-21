@@ -90,6 +90,11 @@ def train_resnet50(
     min_delta: float = DEFAULT_EARLY_STOPPING_MIN_DELTA,
 ) -> tuple[nn.Module, list[dict[str, float | int]], Path]:
     """Fine-tune ResNet50 and evaluate only the best model on validation."""
+    output_path = Path(output_dir)
+    if output_path.exists() and any(
+        p.name != "repetition_manifest.json" for p in output_path.iterdir()
+    ):
+        raise FileExistsError(f"Diretório de execução não vazio: {output_path}")
     set_seed(seed)
     device = get_device()
     metadata_csv = Path(metadata_csv)
@@ -111,6 +116,7 @@ def train_resnet50(
         batch_size=batch_size,
         num_workers=num_workers,
         seed=seed,
+        splits=("train", "validation"),
         pin_memory=device.type == "cuda",
         transform_factory=build_resnet50_transforms,
     )
