@@ -4,8 +4,11 @@ import json
 from pathlib import Path
 import shutil
 import sys
+import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
+import zipfile
 
 import nbformat
 import numpy as np
@@ -201,6 +204,39 @@ class EvaluationTests(unittest.TestCase):
 
 
 class PureEvaluationTests(unittest.TestCase):
+    def test_notebook_extracts_only_test_paths_with_both_guards_enabled(self):
+        path = Path(__file__).resolve().parents[1] / "notebooks/08_avaliacao_teste.ipynb"
+        notebook = nbformat.read(path, as_version=4)
+        paths = next(c.source for c in notebook.cells if c.id == 'paths')
+        self.assertIn("PROJECT_ROOT / 'data/data.zip'", paths)
+        extract = next(c.source for c in notebook.cells if c.id == 'extract')
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            metadata = synthetic_metadata(dict(train=2, validation=2, test=2))
+            csv_path = root / 'plantvillage_metadata_split.csv'
+            metadata.to_csv(csv_path, index=False)
+            zip_path = root / 'data.zip'
+            with zipfile.ZipFile(zip_path, 'w') as archive:
+                for row in metadata.itertuples():
+                    archive.writestr(row.zip_path, b'synthetic extraction payload')
+            namespace = dict(EXECUTE_TEST_EVALUATION=False, EXTRACT_TEST_IMAGES=True,
+                             plan=SimpleNamespace(sources={str(csv_path): evaluation.sha256(csv_path)}),
+                             RESULTS_ROOT=root, IMAGE_ROOT=root / 'images', ZIP_PATH=zip_path,
+                             pd=pd)
+            exec(extract, namespace)
+            self.assertFalse((root / 'images').exists())
+            namespace['EXECUTE_TEST_EVALUATION'] = True
+            exec(extract, namespace)
+            extracted = sorted(p.relative_to(root / 'images').as_posix()
+                               for p in (root / 'images').rglob('*') if p.is_file())
+            expected = sorted('/'.join(evaluation._raw_color_relative_parts(p))
+                              for p in metadata.loc[metadata.split.eq('test'), 'zip_path'])
+            self.assertEqual(extracted, expected)
+            before = {p: evaluation.sha256(p) for p in (root / 'images').rglob('*') if p.is_file()}
+            exec(extract, namespace)
+            for p, checksum in before.items():
+                self.assertEqual(evaluation.sha256(p), checksum)
+
     def test_split_integrity(self):
         counts = dict(train=38, validation=38, test=38)
         frame = synthetic_metadata(counts)
