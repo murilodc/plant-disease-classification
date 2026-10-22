@@ -1,0 +1,21 @@
+model_key,model_name,true_index,predicted_index,true_class,predicted_class,errors_mean,errors_std,rate_mean,rate_std,seeds_with_error,source_support
+baseline_cnn,CNN baseline,32,31,Tomato___Septoria_leaf_spot,Tomato___Leaf_Mold,20.666666666666668,12.858201014657272,0.0779874213836478,0.04852151326285764,3,265
+baseline_cnn,CNN baseline,35,28,Tomato___Tomato_Yellow_Leaf_Curl_Virus,Tomato___Bacterial_spot,15.0,16.522711641858304,0.018679950186799504,0.02057622869471769,3,803
+baseline_cnn,CNN baseline,35,15,Tomato___Tomato_Yellow_Leaf_Curl_Virus,Orange___Haunglongbing_(Citrus_greening),13.0,19.05255888325765,0.016189290161892904,0.02372672339135448,3,803
+baseline_cnn,CNN baseline,21,30,Potato___Late_blight,Tomato___Late_blight,11.666666666666666,2.516611478423583,0.07882882882882884,0.01700413161097016,3,148
+baseline_cnn,CNN baseline,29,30,Tomato___Early_blight,Tomato___Late_blight,10.666666666666666,4.163331998932265,0.07158836689038031,0.027941825496189704,3,149
+densenet201,DenseNet201,7,9,Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot,Corn_(maize)___Northern_Leaf_Blight,4.666666666666667,1.1547005383792517,0.06060606060606061,0.014996110888042225,3,77
+densenet201,DenseNet201,9,7,Corn_(maize)___Northern_Leaf_Blight,Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot,4.333333333333333,1.1547005383792517,0.029279279279279282,0.007802030664724673,3,148
+densenet201,DenseNet201,34,32,Tomato___Target_Spot,Tomato___Septoria_leaf_spot,3.3333333333333335,1.5275252316519465,0.015873015873015872,0.007273929674533078,3,210
+densenet201,DenseNet201,21,30,Potato___Late_blight,Tomato___Late_blight,3.0,1.7320508075688772,0.02027027027027027,0.011703045997087009,3,148
+densenet201,DenseNet201,34,33,Tomato___Target_Spot,Tomato___Spider_mites Two-spotted_spider_mite,3.0,2.6457513110645907,0.014285714285714285,0.01259881576697424,2,210
+efficientnet_b0,EfficientNet-B0,9,7,Corn_(maize)___Northern_Leaf_Blight,Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot,4.0,5.291502622129181,0.02702702702702703,0.03575339609546744,2,148
+efficientnet_b0,EfficientNet-B0,7,9,Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot,Corn_(maize)___Northern_Leaf_Blight,3.0,2.6457513110645907,0.03896103896103896,0.034360406637202474,2,77
+efficientnet_b0,EfficientNet-B0,28,35,Tomato___Bacterial_spot,Tomato___Tomato_Yellow_Leaf_Curl_Virus,2.6666666666666665,2.5166114784235836,0.008359456635318703,0.007889064195685214,2,319
+efficientnet_b0,EfficientNet-B0,29,30,Tomato___Early_blight,Tomato___Late_blight,2.6666666666666665,2.081665999466133,0.017897091722595078,0.013970912748094852,3,149
+efficientnet_b0,EfficientNet-B0,18,32,"Pepper,_bell___Bacterial_spot",Tomato___Septoria_leaf_spot,1.3333333333333333,2.3094010767585034,0.009070294784580499,0.015710211406520427,1,147
+resnet50,ResNet50,7,9,Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot,Corn_(maize)___Northern_Leaf_Blight,5.333333333333333,2.516611478423583,0.06926406926406926,0.03268326595355303,3,77
+resnet50,ResNet50,19,18,"Pepper,_bell___healthy","Pepper,_bell___Bacterial_spot",4.333333333333333,2.0816659994661326,0.01951951951951952,0.009376873871469066,3,222
+resnet50,ResNet50,21,30,Potato___Late_blight,Tomato___Late_blight,3.6666666666666665,1.1547005383792515,0.024774774774774775,0.007802030664724673,3,148
+resnet50,ResNet50,29,30,Tomato___Early_blight,Tomato___Late_blight,2.6666666666666665,0.5773502691896258,0.017897091722595078,0.003874834021406884,3,149
+resnet50,ResNet50,9,7,Corn_(maize)___Northern_Leaf_Blight,Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot,2.3333333333333335,2.5166114784235836,0.015765765765765768,0.01700413161097016,2,148

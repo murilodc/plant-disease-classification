@@ -1,0 +1,5 @@
+model_key,model_name,errors_seed_42,errors_seed_123,errors_seed_456,errors_mean,errors_std,images_wrong_all_seeds,images_wrong_any_seed
+baseline_cnn,CNN baseline,322,326,342,330.0,10.583005244258363,137,576
+resnet50,ResNet50,43,52,37,44.0,7.54983443527075,12,89
+densenet201,DenseNet201,44,45,39,42.666666666666664,3.214550253664318,7,95
+efficientnet_b0,EfficientNet-B0,27,28,32,29.0,2.6457513110645907,4,66

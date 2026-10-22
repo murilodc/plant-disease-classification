@@ -1,0 +1,8 @@
+# Ambiente CPU para o notebook 09; não instalar o requirements.txt de treinamento.
+numpy>=1.26
+pandas>=2.2
+matplotlib>=3.8
+nbformat>=5.10
+nbclient>=0.10
+ipykernel>=6.29
+jupyterlab>=4.2

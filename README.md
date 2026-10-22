@@ -208,3 +208,73 @@ preservação de fontes, bloqueio de sobrescrita e a chave desativada do noteboo
 Execute com `python -m unittest discover -s tests -v` (ou com o comando Python
 3.14 acima para este ambiente local). Nenhuma avaliação real é executada pelos
 testes ou pela implementação desta tarefa.
+
+### Análise científica local — notebook 09
+
+`notebooks/09_analise_resultados.ipynb` analisa os resultados já salvos de
+validação e teste sem importar PyTorch/torchvision, carregar checkpoints ou
+executar inferência. Todo o processamento é local e usa apenas CPU.
+
+Para um ambiente separado de análise no Windows, execute na raiz do projeto:
+
+```powershell
+py -3.12 -m venv .venv-analysis
+.venv-analysis\Scripts\python.exe -m pip install -r requirements-analysis.txt
+.venv-analysis\Scripts\python.exe -m jupyterlab
+```
+
+Abra o notebook 09 e execute as células em ordem. Ajuste `PROJECT_ROOT` se o
+Jupyter estiver em outra pasta. O ambiente separado evita a incompatibilidade
+entre o interpretador e as extensões da `.venv` antiga descrita acima. Não é
+necessário instalar o `requirements.txt` de treinamento.
+
+Também é possível executar toda a análise sem interface:
+
+```powershell
+.venv-analysis\Scripts\python.exe src/analyze_results.py
+```
+
+As fontes principais são os seis arquivos de `results/repetitions_comparison/`
+e a pasta completa `results/test_evaluation/<id>/`, incluindo manifesto,
+CSV de teste, mapa de classes, métricas, predições, tempos e matrizes. Os CSVs
+consolidados de validação são usados como exportados no notebook 07: uma
+baseline local antiga de outra GPU não substitui esses dados. Arquivos
+individuais de treinamento não precisam ser copiados para executar a análise;
+suas ausências são listadas para documentar o limite da auditoria histórica.
+
+Se existir exatamente uma avaliação final completa, o programa a identifica.
+Com várias avaliações completas, informe `TEST_DIR` no notebook ou `--test-dir`
+na CLI, escolhendo pela proveniência do experimento, sem consultar qual teve
+melhor desempenho. Arquivos necessários ausentes são identificados pelo caminho
+exato. Hashes divergentes ou inconsistências bloqueiam a análise.
+
+Cada execução cria uma pasta exclusiva `reports/resultados/<data_UTC>_<id>/`,
+fora dos resultados originais. Contém:
+
+- `relatorio_resultados.md`: tabelas, discussão baseada nos valores observados,
+  classes difíceis, confusões direcionais, custo e limitações científicas.
+- `tables/`: médias/DP das sete métricas, separadas por split, resultados
+  individuais, métricas por classe, suportes/folhas, principais confusões por
+  contagem e taxa, persistência dos erros, custos e inventário de arquivos.
+- Tabelas `.tex` compactas para validação/teste e custo, com `booktabs`.
+- `figures/`: oito figuras PDF vetoriais e PNG de 300 dpi, com legendas em
+  `captions.json`: métricas globais, F1 por classe, confusões completas e sem
+  diagonal, principais pares de confusão, custos, curvas e diferenças entre
+  validação e teste. Use `graphicx` para os PDFs no LaTeX.
+- `analysis_manifest.json`: hashes das fontes/saídas, versões de análise,
+  status e registro de ausência de inferência e de teste de superioridade.
+
+O notebook 09 foi executado localmente sobre os arquivos reais disponíveis.
+Uma cópia com suas saídas fica junto ao relatório como
+`09_analise_resultados_executado.ipynb`. O notebook-fonte fica sem saídas,
+pronto para uma nova execução. Os testes específicos do módulo podem ser
+executados com `python -m unittest discover -s tests -p test_analyze_results.py -v`.
+
+As estatísticas usam três sementes e DP amostral (`ddof=1`), sem considerar as
+três passagens nas mesmas imagens como observações independentes. Não há
+seleção pelo teste ou afirmação de superioridade estatística. Tempos são os
+registrados no hardware original, não um benchmark do PC usado para analisar.
+As matrizes direcionais analisadas são de teste: os consolidados de validação
+não incluem matrizes numéricas nem predições por imagem, e contagens não são
+inferidas das figuras PNG. A lista exata de originais ausentes/divergentes
+está em `tables/historical_sources.csv`.
