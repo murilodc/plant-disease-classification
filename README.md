@@ -136,3 +136,75 @@ Se a pasta não for um clone, copie a pasta `src/` atualizada do repositório
 para `PROJECT_ROOT/src/`. Preserve o CSV, dados e resultados existentes. Se o
 Git bloquear o pull por alterações locais, preserve essas alterações antes de
 sincronizar; não use reset ou limpeza forçada. A atualização não inicia treino.
+
+### Avaliação final no teste — notebook 08
+
+`notebooks/08_avaliacao_teste.ipynb` usa `src/evaluate_test.py` para avaliar os
+12 checkpoints previamente escolhidos na validação (quatro modelos, seeds
+42/123/456). Não executa treinamento nem seleciona modelos, hiperparâmetros,
+épocas ou seeds com base no teste. **A avaliação real vem desativada**; executar
+todas as células nessa configuração não abre imagens nem gera resultados de teste.
+
+No Google Colab:
+
+1. Sincronize `src/` e abra o notebook 08. Selecione um runtime com GPU e monte
+   o Drive na primeira célula. Para comparar tempos controlados, preserve o
+   ambiente/GPU L4 dos experimentos; métricas de classificação não exigem L4.
+2. Ajuste `PROJECT_ROOT` para a pasta com os artefatos usados no notebook 07.
+   Preserve `results/plantvillage_metadata_split.csv` original, os diretórios
+   `results/<modelo>/` da seed 42 e
+   `results/repetitions/seed_<123 ou 456>/<modelo>/` com seus manifestos.
+   A cópia local deste checkout contém apenas a baseline original; os resultados
+   completos devem ser fornecidos pelo Drive. Não recrie a divisão.
+3. Execute a configuração e a preparação mantendo
+   `EXECUTE_TEST_EVALUATION = False`. A preparação exige 12 execuções completas,
+   confere hashes, metadados, seeds, mapas de classes, isolamento de `leaf_id`,
+   contagens 38.008/8.172/8.125 e restaura todos os checkpoints na CPU com
+   carregamento estrito. Nenhuma imagem é aberta nessa etapa.
+4. Somente quando for realizar a avaliação final, ajuste `IMAGE_ROOT` para as
+   imagens extraídas. Se necessário, ajuste `ZIP_PATH` e habilite
+   `EXTRACT_TEST_IMAGES`: a célula extrai apenas os caminhos de teste do CSV,
+   com ambas as chaves habilitadas. Não sobrescreve imagens locais existentes.
+5. Altere deliberadamente `EXECUTE_TEST_EVALUATION = True` e execute a partir
+   da configuração. O avaliador verifica a integridade de todas as imagens,
+   executa os 12 modelos em modo de inferência e salva em uma pasta exclusiva
+   `results/test_evaluation/<data_UTC>_<id>/`. Checkpoints, validações e repetições
+   permanecem preservados. A última célula mostra resultados individuais e
+   consolidados; use somente execuções com manifesto `status=complete`.
+
+O pré-processamento reproduz a validação existente: RGB, resize 224×224 e
+normalização ImageNet, sem augmentation aleatório. Na ResNet50 reutiliza a
+função específica da arquitetura; DenseNet201 e EfficientNet-B0 conferem a
+compatibilidade do pipeline compartilhado. Mantém-se a geometria usada no
+treinamento, inclusive a decisão registrada de não aplicar o recorte oficial
+da EfficientNet-B0. Os modelos são construídos com `weights=None`; os pesos
+aprendidos vêm exclusivamente dos checkpoints existentes.
+
+São salvos acurácia, precisão/recall/F1 macro e ponderados, métricas por classe,
+predições identificadas por caminho, matrizes de confusão absolutas e
+normalizadas em CSV e absolutas em PNG, tempos e descrição dos transforms.
+As tabelas `test_individual.csv` e `test_aggregate.csv` consolidam as sete
+métricas, com média e **desvio padrão amostral (ddof=1)** entre as três seeds.
+As tabelas `test_by_class_*.csv` fazem o mesmo por classe, preservando o suporte
+original. Não há ranking, escolha da melhor seed ou ensemble baseado no teste.
+
+O manifesto registra ambiente, fontes e saídas com SHA-256 e o estado
+`running`/`complete`/`failed`. O CSV exato de teste, o mapa de classes e hashes
+de todas as imagens são preservados junto aos resultados. Uma falha não descarta
+imagens nem produz médias parciais; a pasta permanece como evidência e outra
+execução exige uma nova pasta.
+
+Limite dos artefatos legados: seed/modelo/hash do CSV não estão incorporados nos
+checkpoints antigos. A identidade depende dos metadados/manifestos associados,
+com conferência da arquitetura, mapas, época e métricas de validação. O vínculo
+histórico da seed 42 ao CSV depende de fornecer o original preservado; os hashes
+das repetições são verificados. Essa limitação é registrada, sem modificar os
+artefatos antigos. Arquivos de checkpoint são carregados com `weights_only=True`.
+
+Os testes em `tests/test_evaluate_test.py` usam somente CSVs, imagens e
+checkpoints sintéticos em diretórios temporários. Cobrem o fluxo de inferência,
+as 12 execuções, integridade, classes/seeds/splits, métricas conhecidas, ddof=1,
+preservação de fontes, bloqueio de sobrescrita e a chave desativada do notebook.
+Execute com `python -m unittest discover -s tests -v` (ou com o comando Python
+3.14 acima para este ambiente local). Nenhuma avaliação real é executada pelos
+testes ou pela implementação desta tarefa.

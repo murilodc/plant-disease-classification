@@ -304,6 +304,7 @@ def save_confusion_matrix(
     output_path: str | Path,
     figsize: tuple[float, float] = (24.0, 22.0),
     dpi: int = 200,
+    title: str = "Matriz de confusao - validacao",
 ) -> Path:
     """Render and save a legible confusion matrix with all class names."""
     class_names = [str(class_name) for class_name in class_names]
@@ -317,7 +318,7 @@ def save_confusion_matrix(
     image = ax.imshow(matrix, interpolation="nearest", cmap="Blues")
     fig.colorbar(image, ax=ax, fraction=0.046, pad=0.04)
     ax.set(
-        title="Matriz de confusao - validacao",
+        title=title,
         xlabel="Classe predita",
         ylabel="Classe real",
         xticks=labels,
