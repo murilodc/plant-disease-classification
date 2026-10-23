@@ -250,11 +250,14 @@ baseline local antiga de outra GPU não substitui esses dados. Arquivos
 individuais de treinamento não precisam ser copiados para executar a análise;
 suas ausências são listadas para documentar o limite da auditoria histórica.
 
-Se existir exatamente uma avaliação final completa, o programa a identifica.
-Com várias avaliações completas, informe `TEST_DIR` no notebook ou `--test-dir`
-na CLI, escolhendo pela proveniência do experimento, sem consultar qual teve
-melhor desempenho. Arquivos necessários ausentes são identificados pelo caminho
-exato. Hashes divergentes ou inconsistências bloqueiam a análise.
+O notebook fixa `TEST_RUN_ID = '20261022T233940Z_c146fc70d66e'`, a avaliação nova
+solicitada. A configuração mantém essa escolha mesmo quando há outras avaliações
+completas no Drive. No Colab, abra o notebook atualizado e execute todas as células;
+não precisa definir TEST_DIR em uma célula separada. Para outro experimento,
+altere TEST_RUN_ID pela identidade/proveniência, sem comparar desempenhos.
+A CLI continua exigindo `--test-dir` quando houver várias avaliações completas.
+Arquivos necessários ausentes são identificados pelo caminho exato. Hashes
+divergentes ou inconsistências bloqueiam a análise.
 
 Cada execução cria uma pasta exclusiva `reports/resultados/<data_UTC>_<id>/`,
 fora dos resultados originais. Contém:

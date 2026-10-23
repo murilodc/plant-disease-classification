@@ -1,0 +1,16 @@
+\begin{table}[htbp]
+\centering
+\caption{Custo computacional observado. Tempos: média e DP entre três sementes.}
+\label{tab:cost}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+Modelo & Parâm. (M) & Treino (min) & Época (s) & Teste (ms/img) \\
+\midrule
+CNN baseline & 0,398 & 48,73 $\pm$ 1,95 & 97,46 $\pm$ 3,91 & 1,424 $\pm$ 0,006 \\
+ResNet50 & 23,586 & 43,64 $\pm$ 6,14 & 187,05 $\pm$ 0,49 & 1,418 $\pm$ 0,005 \\
+DenseNet201 & 18,166 & 78,66 $\pm$ 31,21 & 329,29 $\pm$ 0,45 & 2,404 $\pm$ 0,009 \\
+EfficientNet-B0 & 4,056 & 36,65 $\pm$ 8,63 & 115,82 $\pm$ 0,67 & 1,433 $\pm$ 0,030 \\
+\bottomrule
+\end{tabular}
+\end{table}

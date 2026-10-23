@@ -24,6 +24,12 @@ class AnalysisTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             project = Path(temporary) / "experiment"
             (project / "results").mkdir(parents=True)
+            selected = project / 'results/test_evaluation/20261022T233940Z_c146fc70d66e'
+            selected.mkdir(parents=True)
+            (selected / 'evaluation_manifest.json').write_text('{"status":"complete"}')
+            older = project / 'results/test_evaluation/20261022T225848Z_a96e51c9a0fc'
+            older.mkdir()
+            (older / 'evaluation_manifest.json').write_text('{"status":"complete"}')
             sentinel = project / 'results/unchanged.txt'
             sentinel.write_text('original')
             prepared = source.replace('PROJECT_ROOT_OVERRIDE = None', f'PROJECT_ROOT_OVERRIDE = Path({str(project)!r})')
@@ -45,6 +51,10 @@ class AnalysisTests(unittest.TestCase):
                 exec(prepared, namespace)
                 self.assertEqual(namespace['PROJECT_ROOT'], project.resolve())
                 self.assertEqual(namespace['CODE_ROOT'], code_root / 'repo')
+                self.assertEqual(namespace['TEST_DIR'], selected)
+                # Re-running configuration must preserve the requested new run
+                # even when more than one completed evaluation exists.
+                self.assertNotIn('TEST_DIR = None', source)
                 self.assertEqual(sentinel.read_text(), 'original')
                 self.assertEqual(git.call_count, 1)
             with patch.dict(sys.modules, {'google': ModuleType('google'), 'google.colab': colab}), \
