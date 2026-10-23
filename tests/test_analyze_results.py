@@ -2,6 +2,7 @@
 import ast
 from pathlib import Path
 import sys
+import tempfile
 import unittest
 
 import nbformat
@@ -13,6 +14,33 @@ import analyze_results as analysis
 
 
 class AnalysisTests(unittest.TestCase):
+    def test_notebook_finds_nested_local_project_and_drive_export(self):
+        notebook = nbformat.read(Path(__file__).resolve().parents[1] / "notebooks/09_analise_resultados.ipynb", as_version=4)
+        source = next(c.source for c in notebook.cells if c.id == "paths")
+        tree = ast.parse(source)
+        function = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "find_project_root")
+        namespace = {"Path": Path}
+        exec(compile(ast.Module(body=[function], type_ignores=[]), "paths", "exec"), namespace)
+        find_root = namespace["find_project_root"]
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project = root / "project"
+            (project / "src").mkdir(parents=True)
+            (project / "src/analyze_results.py").write_text("# fixture")
+            nested = project / "notebooks/nested"
+            nested.mkdir(parents=True)
+            self.assertEqual(find_root([nested, *nested.parents]), project.resolve())
+            drive = root / "drive/MyDrive/plant-disease-classification"
+            (drive / "src").mkdir(parents=True)
+            (drive / "src/analyze_results.py").write_text("# fixture")
+            (drive / "results/repetitions_comparison").mkdir(parents=True)
+            (drive / "results/repetitions_comparison/validation_individual.csv").write_text("fixture")
+            self.assertEqual(find_root([project, drive]), drive.resolve())
+            with self.assertRaisesRegex(FileNotFoundError, "não sincroniza"):
+                find_root([root / "missing"])
+            self.assertIn("PROJECT_ROOT_OVERRIDE", source)
+            self.assertIn("drive.mount('/content/drive')", source)
+
     def test_aggregation_is_sample_std(self):
         source = pd.DataFrame(dict(model_key=["m"] * 3, model_name=["M"] * 3, accuracy=[.7, .8, .9]))
         summary = analysis.aggregate(source, ["accuracy"]).iloc[0]

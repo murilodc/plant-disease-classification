@@ -223,8 +223,13 @@ py -3.12 -m venv .venv-analysis
 .venv-analysis\Scripts\python.exe -m jupyterlab
 ```
 
-Abra o notebook 09 e execute as células em ordem. Ajuste `PROJECT_ROOT` se o
-Jupyter estiver em outra pasta. O ambiente separado evita a incompatibilidade
+Abra o notebook 09 e execute as células em ordem. A primeira célula procura o
+projeto na pasta atual e nas pastas acima dela. Se necessário, defina
+`PROJECT_ROOT_OVERRIDE` com o caminho exato. No Colab, a célula monta o Drive e
+procura primeiro `/content/drive/MyDrive/plant-disease-classification`, a mesma
+pasta usada nos notebooks 07/08. Abrir o notebook pelo GitHub não sincroniza
+`src/` no Drive: atualize o clone com `git pull --ff-only` nessa pasta ou copie
+`src/` atualizada, preservando `results/`. O ambiente separado evita a incompatibilidade
 entre o interpretador e as extensões da `.venv` antiga descrita acima. Não é
 necessário instalar o `requirements.txt` de treinamento.
 
