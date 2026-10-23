@@ -226,10 +226,13 @@ py -3.12 -m venv .venv-analysis
 Abra o notebook 09 e execute as células em ordem. A primeira célula procura o
 projeto na pasta atual e nas pastas acima dela. Se necessário, defina
 `PROJECT_ROOT_OVERRIDE` com o caminho exato. No Colab, a célula monta o Drive e
-procura primeiro `/content/drive/MyDrive/plant-disease-classification`, a mesma
-pasta usada nos notebooks 07/08. Abrir o notebook pelo GitHub não sincroniza
-`src/` no Drive: atualize o clone com `git pull --ff-only` nessa pasta ou copie
-`src/` atualizada, preservando `results/`. O ambiente separado evita a incompatibilidade
+lê os resultados em `/content/drive/MyDrive/plant-disease-classification`, a
+mesma pasta usada nos notebooks 07/08. O código atual é obtido em um clone
+temporário separado, sem executar `git pull` ou alterar `src/` no Drive. A
+análise não depende de a pasta do experimento ser um clone Git. O caminho e o
+hash do módulo efetivamente executado ficam no manifesto. Se o clone falhar,
+a mensagem inclui stdout/stderr do Git para diagnóstico.
+O ambiente separado evita a incompatibilidade
 entre o interpretador e as extensões da `.venv` antiga descrita acima. Não é
 necessário instalar o `requirements.txt` de treinamento.
 

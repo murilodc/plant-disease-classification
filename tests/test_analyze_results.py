@@ -3,7 +3,9 @@ import ast
 from pathlib import Path
 import sys
 import tempfile
+from types import ModuleType, SimpleNamespace
 import unittest
+from unittest.mock import Mock, patch
 
 import nbformat
 import numpy as np
@@ -14,6 +16,43 @@ import analyze_results as analysis
 
 
 class AnalysisTests(unittest.TestCase):
+    def test_colab_bootstrap_uses_separate_clone_and_surfaces_git_error(self):
+        notebook = nbformat.read(Path(__file__).resolve().parents[1] / "notebooks/09_analise_resultados.ipynb", as_version=4)
+        source = next(c.source for c in notebook.cells if c.id == "paths")
+        colab = ModuleType("google.colab")
+        colab.drive = SimpleNamespace(mount=Mock())
+        with tempfile.TemporaryDirectory() as temporary:
+            project = Path(temporary) / "experiment"
+            (project / "results").mkdir(parents=True)
+            sentinel = project / 'results/unchanged.txt'
+            sentinel.write_text('original')
+            prepared = source.replace('PROJECT_ROOT_OVERRIDE = None', f'PROJECT_ROOT_OVERRIDE = Path({str(project)!r})')
+            code_root = Path(temporary) / "code"
+
+            def clone(command, **kwargs):
+                self.assertEqual(command[:4], ['git', 'clone', '--depth', '1'])
+                self.assertNotIn(str(project), command)
+                target = Path(command[-1]) / 'src/analyze_results.py'
+                target.parent.mkdir(parents=True)
+                target.write_text('# fixture module')
+                return SimpleNamespace(returncode=0, stdout='', stderr='')
+
+            with patch.dict(sys.modules, {'google': ModuleType('google'), 'google.colab': colab}), \
+                 patch.object(sys, 'path', sys.path.copy()), \
+                 patch('tempfile.mkdtemp', return_value=str(code_root)), \
+                 patch('subprocess.run', side_effect=clone) as git:
+                namespace = {}
+                exec(prepared, namespace)
+                self.assertEqual(namespace['PROJECT_ROOT'], project.resolve())
+                self.assertEqual(namespace['CODE_ROOT'], code_root / 'repo')
+                self.assertEqual(sentinel.read_text(), 'original')
+                self.assertEqual(git.call_count, 1)
+            with patch.dict(sys.modules, {'google': ModuleType('google'), 'google.colab': colab}), \
+                 patch('tempfile.mkdtemp', return_value=str(code_root)), \
+                 patch('subprocess.run', return_value=SimpleNamespace(returncode=1, stdout='', stderr='network unavailable')):
+                with self.assertRaisesRegex(RuntimeError, 'network unavailable'):
+                    exec(prepared, {})
+
     def test_notebook_finds_nested_local_project_and_drive_export(self):
         notebook = nbformat.read(Path(__file__).resolve().parents[1] / "notebooks/09_analise_resultados.ipynb", as_version=4)
         source = next(c.source for c in notebook.cells if c.id == "paths")

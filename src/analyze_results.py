@@ -691,8 +691,7 @@ def create_report(data, tables, captions):
 def run_analysis(project_root, test_dir=None, output_dir=None):
     project = Path(project_root).resolve()
     data = load_saved_results(project / "results", test_dir)
-    for relative in ("src/analyze_results.py", "notebooks/09_analise_resultados.ipynb", "requirements-analysis.txt"):
-        path = project / relative
+    for path in (Path(__file__).resolve(), project / "notebooks/09_analise_resultados.ipynb", project / "requirements-analysis.txt"):
         if path.is_file():
             data.sources[str(path)] = digest(path)
     tables = scientific_tables(data)
@@ -703,6 +702,7 @@ def run_analysis(project_root, test_dir=None, output_dir=None):
     (output / "tables").mkdir()
     (output / "figures").mkdir()
     manifest = {"status": "running", "sources_sha256": data.sources, "test_dir": str(data.test_dir),
+                "analysis_module_path": str(Path(__file__).resolve()),
                 "std_ddof": 1, "n_seeds": 3, "model_inference_executed": False,
                 "statistical_superiority_test_performed": False,
                 "python": platform.python_version(), "pandas": pd.__version__,
