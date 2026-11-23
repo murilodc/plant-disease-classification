@@ -297,6 +297,9 @@ os detalhes de treinamento conferidos no código e os trechos de metodologia,
 resultados e conclusão para o teste estatístico. O PDF de 22/11/2026 repete as
 subseções 5.1–5.3 em 6.1–6.3 e as tabelas de configurações; integre o complemento
 uma única vez após consolidar essas seções no documento-fonte.
+Copie também as entradas de `docs/referencias_estatistica.bib` para a bibliografia
+utilizada pelo TCC. As duas tabelas do complemento usam `table*` para ocupar a
+largura da página no formato de duas colunas.
 
 Para reproduzir a análise estatística em CPU, na raiz do projeto:
 

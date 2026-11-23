@@ -25,7 +25,7 @@ treináveis. As saídas são logits, fornecidos diretamente à
 A classe predita é determinada pelo maior logit. Durante a avaliação, o
 modelo opera em modo de inferência, com dropout desativado.
 
-\begin{table}[htbp]
+\begin{table*}[t]
 \centering
 \caption{Estrutura da CNN própria. As dimensões representam canais, altura
 e largura, sem a dimensão do lote.}
@@ -47,7 +47,7 @@ Camada linear & 38 & -- & 9.766 \\
 Total & -- & -- & 398.182 \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
 
 % Acrescentar aos detalhes de treinamento existentes; evitar repeti-los.
 \subsubsection{Detalhes do treinamento da CNN própria}
@@ -103,7 +103,7 @@ teste de Wilcoxon. Após a correção de Holm sobre os 12 testes, todos os
 p-valores ajustados foram iguais a 1,00. Não houve rejeição da hipótese
 nula ao nível de 5\% em nenhuma das comparações.
 
-\begin{table}[htbp]
+\begin{table*}[t]
 \centering
 \caption{P-valores brutos do Wilcoxon bilateral, com três pares por
 comparação. Todos os p-valores ajustados por Holm foram 1,00.}
@@ -121,7 +121,7 @@ ResNet50 e EfficientNet-B0 & 0,25 & 0,50 \\
 DenseNet201 e EfficientNet-B0 & 0,25 & 0,25 \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
 
 Esse resultado deve ser interpretado considerando o número reduzido de
 execuções. Com três diferenças não nulas, existem apenas $2^3=8$
