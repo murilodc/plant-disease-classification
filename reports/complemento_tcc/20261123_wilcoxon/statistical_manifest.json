@@ -1,0 +1,36 @@
+{
+  "status": "complete",
+  "test": "paired Wilcoxon signed-rank",
+  "alternative": "two-sided",
+  "alpha": 0.05,
+  "family": "6 architecture pairs x 2 metrics",
+  "correction": "Holm",
+  "seeds": [
+    42,
+    123,
+    456
+  ],
+  "metrics": [
+    "accuracy",
+    "f1_macro"
+  ],
+  "n_tests": 12,
+  "source": "/workspace/scratch/01f9587824b1/plant-disease-classification/reports/resultados/20261023T005818Z_67a582ae/tables/test_individual.csv",
+  "source_sha256": "6480215f202ba034825d1364792404f65e6cb27107f98cf1c27d6ab676c5f7cf",
+  "script_sha256": "f2a828f661ffdff3f9167f4eb19ff17b067c7b090a5b02b618fada41f3a69b42",
+  "difference_rounding_decimals": 12,
+  "inference_executed": false,
+  "training_executed": false,
+  "python": "3.12.14",
+  "scipy": "1.17.0",
+  "numpy": "2.3.5",
+  "pandas": "2.2.3",
+  "created_at": "2026-11-23T00:43:29.428215+00:00",
+  "limitations": [
+    "Only three pairs; minimum exact two-sided p-value is 0.25.",
+    "Inference is conditional on the fixed dataset split, not new datasets.",
+    "Signed-rank interpretation assumes independent paired differences and symmetry under H0; three pairs cannot assess symmetry reliably.",
+    "Non-rejection does not establish equality or equivalence of architectures.",
+    "Only the published metric export was available; original prediction files and evaluation manifest were not re-audited."
+  ]
+}

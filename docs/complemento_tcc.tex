@@ -1,0 +1,142 @@
+% Trechos para incorporar ao texto-fonte do TCC. Requer booktabs e amsmath.
+% Conferidos com src/baseline_cnn.py e src/train_baseline.py no commit
+% 07ee6c3447c48fa05b0c38b24aa46522f0b84fd9.
+% O PDF de 22/11/2026 repete as subseções 5.1--5.3 em 6.1--6.3.
+% Integrar os trechos uma única vez, após consolidar essas seções.
+
+% Substituir o parágrafo resumido sobre a CNN em Modelos e configurações.
+\subsubsection{Arquitetura da CNN própria}
+A CNN própria recebe imagens RGB de $224\times224$ pixels e foi treinada
+a partir de pesos inicializados sem pré-treinamento. Sua arquitetura possui
+quatro blocos, cada um composto, nesta ordem, por uma convolução, uma
+ativação ReLU, uma operação de max-pooling e uma camada de dropout espacial
+(\texttt{Dropout2d}). As convoluções possuem filtros $3\times3$, passo 1,
+preenchimento de 1 pixel e termo de viés. Os blocos utilizam, respectivamente,
+32, 64, 128 e 256 filtros. O max-pooling utiliza janela $2\times2$, passo 2 e
+sem preenchimento. As probabilidades de dropout espacial são 0,10, 0,15,
+0,20 e 0,25, respectivamente.
+
+Após o quarto bloco, aplica-se global average pooling, implementado por
+\texttt{AdaptiveAvgPool2d((1,1))}, produzindo 256 características. O tensor
+é convertido em um vetor, seguido por dropout com probabilidade 0,50 e uma
+camada linear com 38 saídas. A rede contém 398.182 parâmetros, todos
+treináveis. As saídas são logits, fornecidos diretamente à
+\texttt{CrossEntropyLoss}, sem uma camada softmax explícita no modelo.
+A classe predita é determinada pelo maior logit. Durante a avaliação, o
+modelo opera em modo de inferência, com dropout desativado.
+
+\begin{table}[htbp]
+\centering
+\caption{Estrutura da CNN própria. As dimensões representam canais, altura
+e largura, sem a dimensão do lote.}
+\label{tab:cnn-propria-detalhada}
+\small
+\begin{tabular}{lrrr}
+\toprule
+Etapa & Saída & Dropout & Parâmetros \\
+\midrule
+Entrada & $3\times224\times224$ & -- & 0 \\
+Bloco 1 & $32\times112\times112$ & 0,10 & 896 \\
+Bloco 2 & $64\times56\times56$ & 0,15 & 18.496 \\
+Bloco 3 & $128\times28\times28$ & 0,20 & 73.856 \\
+Bloco 4 & $256\times14\times14$ & 0,25 & 295.168 \\
+Global average pooling & $256\times1\times1$ & -- & 0 \\
+Flatten e dropout & 256 & 0,50 & 0 \\
+Camada linear & 38 & -- & 9.766 \\
+\midrule
+Total & -- & -- & 398.182 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Acrescentar aos detalhes de treinamento existentes; evitar repeti-los.
+\subsubsection{Detalhes do treinamento da CNN própria}
+O treinamento da CNN própria utilizou Adam com taxa de aprendizado fixa
+de $10^{-3}$, função de perda \texttt{CrossEntropyLoss}, lotes de 32
+imagens e limite de 30 épocas. Não foi utilizado agendador de taxa de
+aprendizado. As imagens foram normalizadas com médias RGB
+$(0{,}485,0{,}456,0{,}406)$ e desvios padrão
+$(0{,}229,0{,}224,0{,}225)$. No conjunto de treinamento, aplicaram-se
+rotações aleatórias no intervalo de $-15^\circ$ a $15^\circ$, espelhamento
+horizontal com probabilidade 0,5 e variações de brilho e contraste com
+fatores entre 0,9 e 1,1. A ordem das imagens foi embaralhada no treinamento.
+Na validação e no teste, foram utilizados apenas redimensionamento,
+conversão para tensor e normalização.
+
+A parada antecipada acompanhou a perda de validação, com paciência de
+cinco épocas e melhoria mínima de $10^{-4}$. A gravação do checkpoint
+utilizou um critério separado: qualquer redução estrita na perda de
+validação. O checkpoint com menor perda foi restaurado antes da avaliação.
+Nas execuções com sementes 42, 123 e 456, a CNN própria completou as 30
+épocas, e os checkpoints selecionados corresponderam às épocas 29, 29 e
+30, respectivamente. A divisão dos dados permaneceu fixa em 38.008 imagens
+de treinamento, 8.172 de validação e 8.125 de teste, com separação por
+\texttt{leaf\_id}. Os parâmetros de treinamento foram definidos sem utilizar
+o conjunto de teste para seleção.
+
+% Acrescentar ao protocolo de avaliação.
+\subsubsection{Comparação estatística}
+Foi aplicado o teste de postos sinalizados de Wilcoxon pareado, bilateral
+\cite{wilcoxon1945},
+às métricas de acurácia e F1-score macro do conjunto de teste. Para cada
+par de arquiteturas, os resultados foram pareados pelas sementes 42, 123
+e 456, totalizando três pares por comparação. A unidade de análise foi a
+execução de treinamento; as imagens, classes e épocas não foram tratadas
+como repetições independentes. As seis combinações de arquiteturas e as
+duas métricas constituíram uma família de 12 testes, à qual se aplicou a
+correção de Holm \cite{holm1979}, com nível de significância de 5\%.
+
+O cálculo utilizou \texttt{scipy.stats.wilcoxon}, com p-valores exatos.
+Na comparação de acurácia entre DenseNet201 e EfficientNet-B0, que apresentou
+empate nos valores absolutos das diferenças, utilizou-se a enumeração
+exaustiva das permutações de sinais. As diferenças foram arredondadas a 12 casas decimais
+para evitar artefatos numéricos na ordenação dos postos. A interpretação
+do teste pressupõe diferenças pareadas independentes e uma distribuição
+simétrica sob a hipótese nula; apenas três pares não permitem avaliar
+adequadamente essa simetria. A análise é condicionada à divisão fixa dos
+dados e não estima a variabilidade entre diferentes conjuntos de teste.
+
+% Acrescentar em Resultados e discussão, após os resultados globais.
+\subsection{Resultados da comparação estatística}
+A Tabela~\ref{tab:wilcoxon-arquiteturas} apresenta os p-valores brutos do
+teste de Wilcoxon. Após a correção de Holm sobre os 12 testes, todos os
+p-valores ajustados foram iguais a 1,00. Não houve rejeição da hipótese
+nula ao nível de 5\% em nenhuma das comparações.
+
+\begin{table}[htbp]
+\centering
+\caption{P-valores brutos do Wilcoxon bilateral, com três pares por
+comparação. Todos os p-valores ajustados por Holm foram 1,00.}
+\label{tab:wilcoxon-arquiteturas}
+\small
+\begin{tabular}{lrr}
+\toprule
+Par de arquiteturas & Acurácia & F1 macro \\
+\midrule
+CNN própria e ResNet50 & 0,25 & 0,25 \\
+CNN própria e DenseNet201 & 0,25 & 0,25 \\
+CNN própria e EfficientNet-B0 & 0,25 & 0,25 \\
+ResNet50 e DenseNet201 & 1,00 & 0,75 \\
+ResNet50 e EfficientNet-B0 & 0,25 & 0,50 \\
+DenseNet201 e EfficientNet-B0 & 0,25 & 0,25 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Esse resultado deve ser interpretado considerando o número reduzido de
+execuções. Com três diferenças não nulas, existem apenas $2^3=8$
+configurações de sinais, e o menor p-valor bilateral exato possível é
+$2/8=0{,}25$, mesmo quando uma arquitetura supera a outra nas três
+sementes. Assim, as diferenças de desempenho observadas permanecem
+descritivas: a ausência de significância não demonstra igualdade ou
+equivalência entre as arquiteturas. A EfficientNet-B0 apresentou as maiores
+médias observadas de acurácia e F1 macro, sem que este teste permita
+afirmar superioridade estatística.
+
+% Substituir, na conclusão, a afirmação de que não foram realizados testes.
+% Sugestão de frase:
+% A comparação utilizou uma divisão fixa dos dados e três sementes de
+% treinamento. O teste bilateral de Wilcoxon pareado, com correção de Holm,
+% não identificou diferenças estatisticamente significativas a 5\%, resultado
+% limitado pela resolução do teste com apenas três pares e que não demonstra
+% equivalência entre as arquiteturas.

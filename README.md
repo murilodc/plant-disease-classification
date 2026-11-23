@@ -289,3 +289,41 @@ As matrizes direcionais analisadas são de teste: os consolidados de validação
 não incluem matrizes numéricas nem predições por imagem, e contagens não são
 inferidas das figuras PNG. A lista exata de originais ausentes/divergentes
 está em `tables/historical_sources.csv`.
+
+### Complemento do TCC e teste de Wilcoxon
+
+`docs/complemento_tcc.tex` contém a arquitetura completa da CNN própria,
+os detalhes de treinamento conferidos no código e os trechos de metodologia,
+resultados e conclusão para o teste estatístico. O PDF de 22/11/2026 repete as
+subseções 5.1–5.3 em 6.1–6.3 e as tabelas de configurações; integre o complemento
+uma única vez após consolidar essas seções no documento-fonte.
+
+Para reproduzir a análise estatística em CPU, na raiz do projeto:
+
+```bash
+python -m pip install -r requirements-analysis.txt
+python src/statistical_significance.py --output-dir reports/complemento_tcc/nova_execucao
+python -m unittest discover -s tests -p test_statistical_significance.py -v
+```
+
+O script usa explicitamente o `test_individual.csv` do relatório
+`20261023T005818Z_67a582ae`, sem selecionar um relatório pelo desempenho.
+O CSV-fonte, as execuções antigas e o treinamento são preservados. O destino
+deve ser novo. Para outro export com o mesmo protocolo, informe `--input`.
+São gerados os 12 testes (seis pares × acurácia e F1 macro), p-valores brutos
+e ajustados por Holm, diferenças em pontos percentuais, dados utilizados e
+manifesto com hashes e versões. O cálculo exato trata empates e zeros por
+permutações exaustivas quando necessário.
+
+As sementes 42, 123 e 456 são os três pares; imagens, classes ou épocas não
+aumentam esse tamanho amostral. Todos os p-valores ajustados foram 1,00.
+Com três pares não nulos, o menor p-valor bilateral exato possível é 0,25.
+O resultado não permite afirmar superioridade estatística nem equivalência;
+as diferenças nas médias permanecem descritivas, condicionadas ao split fixo.
+Os pressupostos do teste e as limitações de auditoria estão no manifesto.
+
+McNemar não foi executado: os `predictions.csv` da avaliação original estão
+referenciados nos manifestos, mas não fazem parte deste repositório. Além disso,
+o tratamento de imagens correlacionadas da mesma folha precisa ser definido
+antes de usar esse teste. Não se inferem discordâncias a partir das médias ou
+das matrizes de confusão separadas.
